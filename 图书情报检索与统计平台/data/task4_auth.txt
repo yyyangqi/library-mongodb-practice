@@ -1,0 +1,4 @@
+﻿libReader读=20
+libReader写被拒: not authorized on library to execute command { insert: "books", documents: [ { isbn: "X-TEST", _id: ObjectId('6ad819f642686b3d39cc8988') } ], ordered: true, lsid: { id: UUID("7cf44e7c-5ab7-4a9a-a82b-41ad2ad8c87b") }, $db: "library" }
+libWriter读=20
+libWriter读写=成功

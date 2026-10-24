@@ -1,0 +1,23 @@
+﻿===== 集合列表 =====
+readers | type=collection | options={}
+borrow_logs | type=timeseries | options={"expireAfterSeconds":{"low":157680000,"high":0,"unsigned":false},"timeseries":{"timeField":"borrow_date","granularity":"hours","bucketMaxSpanSeconds":2592000}}
+system.buckets.borrow_logs | type=collection | options={"validator":{"$jsonSchema":{"bsonType":"object","required":["_id","control","data"],"properties":{"_id":{"bsonType":"objectId"},"control":{"bsonType":"object","required":["version","min","max"],"properties":{"version":{"bsonType":"number"},"min":{"bsonType":"object","required":["borrow_date"],"properties":{"borrow_date":{"bsonType":"date"}}},"max":{"bsonType":"object","required":["borrow_date"],"properties":{"borrow_date":{"bsonType":"date"}}},"closed":{"bsonType":"bool"},"count":{"bsonType":"number","minimum":1}},"additionalProperties":false},"data":{"bsonType":"object"},"meta":{}},"additionalProperties":false}},"clusteredIndex":true,"expireAfterSeconds":{"low":157680000,"high":0,"unsigned":false},"timeseries":{"timeField":"borrow_date","granularity":"hours","bucketMaxSpanSeconds":2592000}}
+system.views | type=collection | options={}
+category_stats | type=collection | options={}
+book_logs | type=collection | options={"capped":true,"size":1048576,"max":1000}
+books | type=collection | options={}
+book_in_stock | type=view | options={"viewOn":"books","pipeline":[{"$match":{"stock":{"$gt":0}}}]}
+books条数=20, readers条数=16, borrows条数=66
+insertOne 结果: {"acknowledged":true,"insertedId":"6adc6ddb8ce68afc1ccc8988"}
+insertMany 图书插入数=undefined
+readers 插入数=undefined
+borrow_logs 插入数=undefined
+borrow_logs TTL(秒)={"low":157680000,"high":0,"unsigned":false}
+borrow_logs.count=66
+===== 文档数量核对 =====
+books.count=20
+readers.count=16
+borrow_logs.count=66
+category_stats.count=0
+book_in_stock.count=19
+book_logs.count=0

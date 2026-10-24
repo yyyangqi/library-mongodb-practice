@@ -1,0 +1,22 @@
+﻿===== 集合文档数量 =====
+books=20
+readers=16
+borrow_logs=66
+category_stats=5
+===== borrow_logs 选项(TTL) =====
+{
+  "expireAfterSeconds": {
+    "low": 157680000,
+    "high": 0,
+    "unsigned": false
+  },
+  "timeseries": {
+    "timeField": "borrow_date",
+    "granularity": "hours",
+    "bucketMaxSpanSeconds": 2592000
+  }
+}
+===== 借阅年份分布 =====
+2023年 = 20条
+2024年 = 28条
+2025年 = 18条
