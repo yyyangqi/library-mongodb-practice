@@ -1,0 +1,66 @@
+智慧图书馆数字资源平台 —— 端口分配与启动配置说明
+==============================================================================
+
+一、端口分配
+------------------------------------------------------------------------------
+27017   单机实例       mongod，deploy\standalone.conf，开启 --auth
+27021   副本集 rsLib   主节点候选，priority 2
+27022   副本集 rsLib   从节点，priority 1
+27023   副本集 rsLib   从节点，priority 1
+27024   演练临时节点   节点增删演练时加入，演练后移除（db\rs3 目录保留）
+27019   配置服务器     configsvr，副本集名 csrs，单成员
+27031   分片 shard1    单成员副本集，名 shard1
+27032   分片 shard2    单成员副本集，名 shard2
+27101   mongos          路由，客户端统一入口
+
+二、配置文件
+------------------------------------------------------------------------------
+deploy\standalone.conf   单机：dbPath=db\standalone，logPath=db\standalone.log，port=27017
+deploy\rs0.conf          副本集成员通用模板（port 由启动参数指定，replSet=rsLib）
+deploy\cs.conf           配置服务器：configsvr，replSet=csrs，port=27019
+deploy\shard1.conf       分片一：replSet=shard1，port=27031
+deploy\shard2.conf       分片二：replSet=shard2，port=27032
+deploy\mongos.conf       mongos：configdb=csrs/127.0.0.1:27019，port=27101
+deploy\keyfile           内部认证密钥（三 mongod 与 mongos 共用，权限仅本机）
+deploy\run_py.ps1        以 UTF-8 日志方式调用 Python（-u 无缓冲）
+
+客户端连接配置
+config\config.json       单机 27017（账号 lib_rw，authSource=smart_library）
+config\config_rs.json    副本集 rsLib（三节点主机列表，replicaSet=rsLib）
+config\config_shard.json 分片集群（mongodb://root:***@127.0.0.1:27101/?authSource=admin）
+环境变量 LIB_CONFIG 指向哪个文件，程序就连哪个实例；不设置时默认单机。
+
+三、启动顺序
+------------------------------------------------------------------------------
+1) 单机：mongod --config deploy\standalone.conf
+2) 副本集：依次启动 27021、27022、27023（--replSet rsLib --keyFile deploy\keyfile
+   --dbPath db\rs1|rs2|rs3 --port ...），再执行 rs.initiate() 与副本集账号创建
+3) 分片集群：
+   a. mongod --config deploy\cs.conf        （配置服务器，先起）
+   b. mongod --config deploy\shard1.conf     （分片一）
+   c. mongod --config deploy\shard2.conf     （分片二）
+   d. 三个副本集分别 rs.initiate()
+   e. mongos --config deploy\mongos.conf     （路由，最后起）
+   f. sh.addShard("shard1/127.0.0.1:27031")、sh.addShard("shard2/127.0.0.1:27032")
+   g. enableSharding -> shardCollection borrow_logs {reader_card:1} -> 预分片 -> 导入数据
+   对应脚本：src\tools\shard_setup.py（conf/start-all/init/mongos/shards）
+             src\tools\shard_ops.py（reset/shard/import/dist/bench/auth）
+
+四、认证
+------------------------------------------------------------------------------
+所有实例开启 authorization（mongos 与各 mongod 共用 keyfile 做内部互信）。
+业务账号（authSource=smart_library）：
+  lib_ro    Read@2025    角色 read      只读查询
+  lib_rw    Write@2025   角色 readWrite 日常增删改
+  lib_admin Admin@2025   角色 dbOwner   建索引、改集合校验规则
+管理账号（authSource=admin）：
+  root      Super@2025   角色 root      集群管理、副本集配置、分片操作
+
+五、数据目录与备份
+------------------------------------------------------------------------------
+db\standalone、db\rs1、db\rs2、db\rs3、db\cs、db\shard1、db\shard2、db\mongos.log
+backups\<库名>_<时间戳>\   数据备份（Extended JSON + _manifest.json）
+  导出：python src\tools\backup_db.py dump
+  恢复：python src\tools\backup_db.py restore <备份目录>（恢复后需重跑 create_indexes.py）
+说明：本环境未安装 mongodump（bin 目录仅有 mongod/mongos），故备份由 pymongo 导出，
+      文档内容按 Extended JSON 原样保存，可用于恢复与迁移。
